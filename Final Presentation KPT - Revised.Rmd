@@ -1,0 +1,231 @@
+---
+title: "Nicaraguans Interest in Politics vs. Satisfaction with Government - Compared to Latin America"
+author: "Karen Perez Torres SIS-750"
+date: "2024-03-27"
+output:
+    beamer_presentation:
+    theme: "Malmoe"
+    colortheme: "Rochester"
+fontsize: 10pt
+classoption: "aspectratio=169"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = 'center',
+  include = TRUE
+)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(haven)
+library(patchwork)
+```
+
+
+```{r}
+values<-read.csv("WVScsv.csv")
+
+view(values)
+
+#Change over time of Domocratic Opinions in Latin America
+values2 <- filter(values, B_COUNTRY == 68 | B_COUNTRY == 32 | B_COUNTRY == 76 | B_COUNTRY == 152 | B_COUNTRY == 170 |B_COUNTRY == 218 | B_COUNTRY == 484 | B_COUNTRY == 558 | B_COUNTRY == 604 | B_COUNTRY == 320 | B_COUNTRY == 862 | B_COUNTRY == 858) #Latin America
+
+#Democracy
+#Q250: How Important is Democracy?
+#Q251: How democratically is this country being governed today?
+#Q252: Satisfaction with the political system performance?
+
+values3 = values2 |>
+  group_by(A_YEAR) |>
+  summarize(avg_250 = mean(Q250, na.rm = TRUE),
+            avg_251 = mean(Q251, na.rm = TRUE),
+            avg_252 = mean(Q252, na.rm = TRUE)
+  )
+
+
+#Nicaragua Political Importance vs. Satisfaction with Governing System in 2020?
+awareness <- filter(values, B_COUNTRY == 558 & Q252 >0 & Q4 > 0)
+
+#Q4: Important in life: Politics (For each of the following aspects, indicate how important it is in your life. 
+#Would you say it is very important, rather important, not very important or not important at all?)
+##Q252: Satisfaction with the political system performance?
+awareness2 = awareness |>
+  group_by(Q4) |>
+  summarize(avg_252 = mean(Q252, na.rm = TRUE)
+  )
+#Visualization would be a bar chart of each response (1 = Very, 2=Kind of) with its avg Q252 response
+
+#FINDING: In Nicaragua, people are pulled to the extremes. Either they are very engaged AND Satisfied
+# OR they are not engaged AND dissatisfied. WHY? Hypothesis: Totalitarianism
+  
+#Linear Regression of Political Importance to Satisfaction for Latin America
+awarenessla <- filter(values2, Q252 >0 & Q4 > 0)
+latinawareness <- lm(Q252 ~ Q4, data = awarenessla)
+
+#Theme of Graph
+Theme <- theme_minimal() +
+  theme(
+    text = element_text(hjust = .5),
+    plot.title = element_text(hjust = .5),
+    plot.subtitle = element_text(hjust = .5),
+    plot.background = element_rect(fill = 'cornflowerblue', color = 'NA'),
+    legend.position = 'center',
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.line.x = element_line(color = 'black'),
+    axis.text.y = element_text(color = 'black')
+  )
+
+Theme2 <- theme_minimal() +
+  theme(
+    text = element_text(),
+    plot.title = element_text(face = 'bold', hjust = 1),
+    plot.subtitle = element_text(hjust = 1),
+    plot.background = element_rect(fill = 'white', color = 'NA'),
+    legend.position = 'center',
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.line.x = element_line(color = 'black'),
+    axis.text.y = element_text(color = 'black')
+  )
+```
+
+```{r}
+#Fig 1
+#Bar Graph
+P1 = awareness2 |>
+  ggplot(aes(
+    x = as.factor(Q4), 
+    y = avg_252,
+    fill = as.factor (Q4),
+  )) +
+  geom_col() +
+  labs(
+    x = "Q4: Politics Important to You?",
+    y = "Q252: Avg. Gov. Satisfaction") +
+  scale_fill_manual(
+    values = c("1" = "white", "2" = "white", "3" = "white", "4" = "white")) +
+  Theme
+
+```
+
+```{r}
+#Fig 2
+#Relationship between the importance of politics and satisfaction withthe political system in Nicaragua
+
+
+P2 = awareness |>
+  ggplot(aes(
+    x = Q4,
+    y = Q252,
+  )) +
+  geom_jitter(color = "cornflowerblue", alpha = .2 ) +
+  geom_smooth(method = lm, se = TRUE, color = 'black') +
+  scale_x_continuous(name = "Q4: Politics Important to You?") +
+  scale_y_continuous(name = "Q252: Avg. Governance Satisfaction") +
+  theme_minimal(base_size = 8) +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.margin = margin(0, 0, 0, 20),
+    legend.position = "top",
+    legend.box = "horizontal",
+    legend.box.spacing = grid::unit(0, "pt"),
+    legend.justification = c(1, 0),
+    legend.spacing.x = unit(2, "pt"),
+    legend.spacing.y = unit(2, "pt"),
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.key.width = unit(10, "pt")
+  )
+
+```
+
+```{r}
+#Fig 3
+#Compared to Latin America
+
+P3 = awarenessla |>
+  ggplot(aes(
+    x = Q4,
+    y = Q252,
+  )) + 
+  geom_jitter(shape = 10, color = "red", alpha = .2 ) +
+  geom_smooth(method = lm, se = TRUE, color = 'black') +
+  scale_x_continuous(name = "Q4: Politics Important to You?") +
+  scale_y_continuous(name = "Q252: Avg. Governance Satisfaction") +
+  theme_minimal(base_size = 8) +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.margin = margin(0, 0, 0, 20),
+    legend.position = "top",
+    legend.box = "horizontal",
+    legend.box.spacing = grid::unit(0, "pt"),
+    legend.justification = c(1, 0),
+    legend.spacing.x = unit(2, "pt"),
+    legend.spacing.y = unit(2, "pt"),
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.key.width = unit(10, "pt")
+  )
+```
+
+
+##  Data Exploration: The World Values Survey Association (WVS)
+- Collected from 64 countries/territories.
+- We are only looking at Nicaragua, in relation to the wider Latin American region.
+- The 7th wave of the WVS took place in 2017-2022.
+- 353 Questions on Political Interest and Political Participation
+- We focused on two questions in particular, and used the WVS coding of answers:
+  - Q4 : For each of the following, indicate how important it is in your life : Politics
+    - 1 : Very important
+    - 2 : Rather important
+    - 3 : Not very important
+    - 4 : Not at all important
+  - Q252: On a scale from 1 to 10 where “1” is “not satisfied at all” and “10” is “completely satisfied”, how satisfied are you with how the political system is functioning in your country these days?
+
+Source: https://www.worldvaluessurvey.org/WVSDocumentationWV7.jsp
+
+---
+
+### Fig 1: Count: Importance of Politics and Gov. Satisfaction in Nicaragua 
+x = (1=Very Important 4=Not at all Important)
+
+y = (1=Not Satisfied At All 10=Completely Satisfied)
+
+```{r fig.width = 4, fig.height = 2.675}
+plot(P1)
+``` 
+---
+
+### Fig 2: Relationship: Importance of Politics and Gov. Satisfaction in Nicaragua 
+
+```{r fig.width = 4, fig.height = 2.675}
+plot(P2)
+```
+
+---
+
+### Fig 3: Relationship:  Importance of Politics and Gov. Satisfaction in L. America
+
+```{r fig.width = 4, fig.height = 2.675}
+plot(P3)
+```
+
+---
+
+## FINDINGS:
+
+From Fig. 2, we see that as Nicaraguans record a lesser importance to the role of politics in their life, they also record less satisfaction in the government. Inversely, the more highly a respondent assigns the importance of politics in society, the greater their overall satisfaction. 
+
+Fig 3 records a similar, if less intense, relationship among respondents, among others in the Latin American region.
+
+What we hypothesis to explain these findings is this:
+Auhtoriatrian regimes surpess the political enthusiasm of opponents, while privelaging their own supporters. 
+
+Nicaraguans are especially attuned to the insider (corrupt) nature of the Ortega regime, with insiders encouraged to feel that politics are very important, while outsiders are discouraged form entering the political process at all. Insiders will naturally feel greater satisfacftion for a regime that works for their gain, while outsiders will be dissatisfied with a government that actively seeks to marginalize them.
+
+Finding ways of discerning who is among the "in" versus "out" groups could test this new hypothesis, as well as a comparison of authoritarian and democratic states around the globe. As a whole, the rest of Latin America is less authoritarian than Nicaragua, which conforms to our theory, we see in Fig 3 the softer relationship between the importance of politics and government satisfaction regionally.
