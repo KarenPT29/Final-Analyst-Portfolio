@@ -1,0 +1,173 @@
+---
+main_topsize: 0.08 
+main_bottomsize: 0.05
+#ESSENTIALS
+title: '**Internet Access and Freedom**'
+author:
+  - name: '**Karen Perez Torres**'
+    main: true
+    email: karenpt@american.edu
+affiliation:
+    address: SIS, American University
+main_findings: "Did an increase of access to the internet create a freer world?"
+primary_colour: "#0063B2FF"
+secondary_colour: "#9CC3D5FF"
+accent_colour: "#cc0000"
+output: 
+  posterdown::posterdown_betterport:
+    self_contained: true
+    pandoc_args: --mathjax
+    number_sections: false
+bibliography: packages.bib
+link-citations: true
+---
+
+```{r, include=FALSE}
+  library(tidyverse)
+  library(knitr)
+  library(ggplot2)
+  library(modelsummary)
+  library(gt)
+freedom <- read.csv("CleanFreedom.csv")
+view(freedom)
+```
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(
+    echo = FALSE,
+    comment = NA,
+    message = FALSE, 
+    warning = FALSE,
+    fig.align = 'center'
+  )
+  options(modelsummary_factory_default = "gt")
+```
+
+# Introduction
+
+The Internet has caused massive shifts in the way that people access and consume information, and many believed it would be a force for freedom and positive change around the world. 
+
+I have evaluated changes in national Internet Access and Freedom, as measured by Freedom House, between two years, 2013 and 2021. These years were selected for their recency and relevance, as this period captures a long intermediary period of broader global internet access in the early 2010s, through the most recent year of dataset overlap, which has not been recorded for many countries beyond 2021. I have included another possible explanatory factor, GDP per Capita, to see if increases in GDP may have a better predictive ability on changes in Freedom.
+```{r, include=FALSE}
+knitr::write_bib(c('posterdown', 'rmarkdown','pagedown'), 'packages.bib')
+```
+
+## Objectives
+
+1. Understand Changes in Variables by Global and Regional lenses
+2. Run a Regression Analysis of Internet Access and Freedom
+
+# Methodology
+
+I combined three datasets:
+
+1. Freedom House 2013-2023 Index: https://freedomhouse.org/report/freedom-world. 
+The aggregate freedom metric is a combination of various sub-metrics, such as freedom of expression, rule of law, and personal autonomy. In our dataset, a delta was calculated between the two years to create a comparable metric across all countries.
+
+2. World Bank 1960-2022 on Internet Use: https://data.worldbank.org/indicator/IT.NET.USER.ZS
+This is measured by the World Bank, as Individuals using the Internet (% of population) in each country. To make nations comparable, we again used the difference between the starting and ending years as our metric.
+
+3. World Bank 1960-2022 on GDP per Capita: https://data.worldbank.org/indicator/NY.GDP.PCAP.CD
+GDP per Capita is equal to the annual GDP of a country, divided by the population in that year, normalized to the current US dollar. The delta is again used.
+
+Cleanup: Countries with missing data were eliminated from the dataset. Since the scope of this investigation is global, an appropriate sample size remains in order to conduct meaningful statistical analysis.
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+# Data Exploration
+
+First let's take a look at how Freedom House scores have changed by region from 2013 to 2021, and examine how Internet Access and GDP per Capita have also seen changes during that time.
+
+```{r out.width="80%"}
+filter(freedom) |>  
+    ggplot(aes(y = fchange, x = Region, color = Region)) +
+    geom_boxplot() +
+    theme_minimal() +
+    theme(legend.position="none") +
+    labs(title='Regional Change in Freedom Scores',x="Region",y='Chnage in Score')
+```
+
+Referencing the table below, Asia has seen the smallest declines in freedom scores, at -.09, while Europe has seen the steepest, at -3.44.
+
+Asia has also seen the largest growth in internet usage, though likely Asia, Eurasia, and Africa had more catching up to do, while Europe's GDP per Capita saw the strongest growth, of almost $7,000, while the Middle East saw declines of near -$4,000 in the eight years measured.
+
+```{r}
+table =
+    freedom |>
+  group_by(Region) |>
+  summarise(
+    FreedomAvg = mean(fchange),
+    InternetAvg = mean(ichange),
+    GDPAvg = mean(gchange))
+
+knitr::kable(table, format = "markdown", digits = 2, align=c(rep('c',times=4)))
+```
+
+# Regression Analysis & Findings
+
+
+A linear regression analysis of Change in Internet and concurrent Change in Freedom will illuminate the statistical relationship between the two variables. Through graphs and modeling, we can determine if this is a significant relationship, meaning that internet access does seem to impact a country's freedom, or not significant, that our analysis can not discern a meaningful influence. A visualization is a quick way to see how the two variables relate to each other, and can be found below:
+
+```{r out.width="80%"}
+ggplot(freedom, aes(x=ichange, y=fchange)) +
+  geom_point()+
+  labs(title= "Change in Internet and Freedom from 2013-2021", x = "Change in Internet (%)", y = "Change in Freedom Score") + 
+  geom_smooth(method='lm') +
+  theme_minimal()
+```
+The regression line, or line of best fit, appears to be near horizontal, indicating off the bat that there is no relationship. This is intuitively validated: based on the graph, if you have any change of internet access, you would predict the same Freedom score at all levels. However, we obviously can see that Freedom has changed within the countries we have studied, irregardless of changes in internet use.
+
+Despite our first look not being promising, this finding will still need to be confirmed with regression models, which includes a more sophisticated multivariate analysis that incorporates changes in GDP per Capita over the same period:
+
+
+```{r, include = FALSE} 
+regression = list(
+              Model_1 = lm(fchange~ichange, data = freedom),
+              Model_2 = lm(fchange~ichange + gchange, data = freedom)
+)
+```
+
+```{r, include=TRUE, out.width="99%"}
+coefficients <- c('(Intercept)'='Constant', 'ichange'='Change in Internet Use (%)', 'gchange'='Change in GDP ($)')
+
+modelsummary(regression, coef_rename=coefficients, fmt = 5,  gof_map = 'nobs', statistic = NULL, 
+               stars = c('*' = 0.05),
+               title = 'Analysis of Significance'
+             )
+```
+
+```{r, include=FALSE} 
+model3 <- lm(fchange~ichange, data = freedom)
+summary(model3)
+```
+
+```{r, include=FALSE}
+model4 <- lm(fchange~gchange, data = freedom)
+summary(model4)
+```
+
+Model_1: 
+With a p-value of .488 in Model 1, the association between increases in Internet and increases in Freedom is not significant at any level, as indicated by a lack of * in the output next to the coefficients. 
+
+Interpreting the results, and pretending that this analysis was significant, the model would show that internet access would have a small positive influence on freedom (.028 points per 1% of internet increase), with countries starting at a change in freedom of -2.9 over the eight years studied.
+
+
+Model_2: 
+For the more complex Model 2, there is still no significance at any threshold between the explanatory factors and Freedom, neither for change in Internet Use nor change in GDP per Capita. It in fact indicates that were there a significant relationship, increases in GDP would in fact have a negative impact on a country's Freedom, such that if a population grew wealthier over this time they would be doing so in a decreasingly free society. 
+
+Another way to interpret this output could be to say that for every 1% increase in internet use in the population, an increase in GDP per Capita of $606 would offset the positive effects.
+
+
+# Conclusion
+
+There is no apparent link between changing Use of the Internet and changes in Freedom House scores over the eight years studied. There is also a lack of evidence for GDP per Capita as an alternate explanatory factor for Freedom House Score changes. If it were possible to line up complete datasets from an earlier point in the Internet's creation, or extend beyond the shadow of COVID for Freedom House scores, there may yet be other lessons to be learned from this investigation. Other possible explanatory variables to consider in the future could be the type of government, military conflicts, access to capital, access to education, and many others that I hope others explore!  
+
+
